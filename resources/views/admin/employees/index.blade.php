@@ -1,0 +1,33 @@
+@extends('layouts.admin')
+
+@section('content')
+<div class="page-header">
+    <h1>Employee Management</h1>
+    <a href="{{ route('admin.employees.create') }}" class="btn-add">+ Add New Employee</a>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>NIP</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($employees as $employee)
+            <tr>
+                <td><code>{{ $employee->nip }}</code></td>
+                <td>{{ $employee->name }}</td>
+                <td>{{ $employee->email }}</td>
+                <td>
+                    <a href="{{ route('admin.employees.edit', $employee->id) }}" class="btn-edit">Edit</a>
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+@endsection

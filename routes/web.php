@@ -1,0 +1,46 @@
+<?php
+
+use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\Auth\LoginController;
+use Illuminate\Support\Facades\Route;
+
+
+Route::get('/', function () {
+    return redirect()->route('login');
+});
+
+// 2. Auth Routes (Guest Only)
+// If they are already logged in, they will be redirected to the dashboard automatically
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [LoginController::class, 'login']);
+});
+    
+Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', function () {
+        if (auth()->user()->isAdmin()) {
+            return redirect()->route('admin.dashboard');
+        }
+        $inUrl = URL::temporarySignedRoute('scan.process', now()->addMinutes(30), ['type' => 'in']);
+        $outUrl = URL::temporarySignedRoute('scan.process', now()->addMinutes(30), ['type' => 'out']);
+        
+        return view('employee.dashboard', compact('inUrl', 'outUrl'));
+    })->name('dashboard');
+
+    Route::middleware(['can:access-admin'])->prefix('admin')->group(function () {
+        Route::get('/dashboard', [AttendanceController::class, 'adminDashboard'])->name('admin.dashboard');
+        Route::get('/employees', [EmployeeController::class, 'index'])->name('admin.employees.index');
+        Route::get('/attendance', [AttendanceController::class, 'index'])->name('admin.attendance.index');
+        Route::get('/employees/create', [EmployeeController::class, 'create'])->name('admin.employees.create');
+        Route::get('/employees/{id}/edit', [EmployeeController::class, 'edit'])->name('admin.employees.edit');
+        Route::put('/employees/{id}', [EmployeeController::class, 'update'])->name('admin.employees.update');
+        Route::post('/employees', [EmployeeController::class, 'store'])->name('admin.employees.store');
+    });
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+});
+
+// Admin view to show the QR Code
+Route::get('/admin/generate-qr', [AttendanceController::class, 'showScanner'])->middleware('can:admin-only');
+// The URL the QR code points to (Employee clicks this via scan)
+Route::get('/clock-in/{type}', [AttendanceController::class, 'processScan'])->name('scan.process')->middleware(['auth', 'signed']);
