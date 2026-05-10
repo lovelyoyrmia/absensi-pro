@@ -1,35 +1,34 @@
 @extends('layouts.admin')
 @section('content')
 <section class="qr-section">
-    <div class="card qr-card">
-        <h3>Live Attendance QR</h3>
-        <p>Refreshes every 30s</p>
-        <div class="qr-flex">
-            <div class="qr-box">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($inUrl) }}" 
-                    alt="Clock In QR" 
-                    style="border: 10px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <span class="label in">CLOCK IN</span>
-            </div>
-            <div class="qr-box">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($outUrl) }}" 
-                    alt="Clock Out QR" 
-                    style="border: 10px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <span class="label out">CLOCK OUT</span>
-            </div>
+    <div class="card qr-card" style="text-align: center;">
+        <h3>Sistem Absensi QR</h3>
+        <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">
+            Scan untuk Clock In atau Clock Out
+        </p>
+        
+        <div class="qr-display">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={{ urlencode($attendanceUrl) }}" 
+                 alt="Universal Attendance QR" 
+                 style="border: 15px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 10px;">
+        </div>
+        
+        <div style="margin-top: 15px;">
+            <span class="status-pill pill-green">AKTIF</span>
         </div>
     </div>
 </section>
 
 <section class="table-section">
     <div class="card">
-        <h3>Today's Attendance ({{ date('d M Y') }})</h3>
+        <h3>Kehadiran Hari Ini ({{ date('d M Y') }})</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Employee</th>
+                    <th>Karyawan</th>
                     <th>Clock In</th>
                     <th>Clock Out</th>
+                    <th>Lokasi</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -39,9 +38,10 @@
                     <td><strong>{{ $record->user->name }}</strong><br><small>{{ $record->user->nip }}</small></td>
                     <td>{{ $record->clock_in->format('H:i') }}</td>
                     <td>{{ $record->clock_out ? $record->clock_out->format('H:i') : '--:--' }}</td>
+                    <td>{{ $record->address }}</td>
                     <td>
                         <span class="status-pill {{ $record->is_late ? 'pill-red' : 'pill-green' }}">
-                            {{ $record->is_late ? 'LATE' : 'ON TIME' }}
+                            {{ $record->is_late ? 'TELAT' : 'TEPAT' }}
                         </span>
                     </td>
                 </tr>
@@ -53,14 +53,14 @@
 
 <section class="table-section">
     <div class="card">
-        <h3>All Employees</h3>
+        <h3>Semua Karyawan</h3>
         <table>
             <thead>
                 <tr>
                     <th>NIP</th>
-                    <th>Name</th>
+                    <th>Nama</th>
                     <th>Email</th>
-                    <th>Joined</th>
+                    <th>Tanggal Gabung</th>
                 </tr>
             </thead>
             <tbody>

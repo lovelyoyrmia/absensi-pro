@@ -22,10 +22,13 @@ Route::middleware(['auth'])->group(function () {
         if (auth()->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }
-        $inUrl = URL::temporarySignedRoute('scan.process', now()->addMinutes(30), ['type' => 'in']);
-        $outUrl = URL::temporarySignedRoute('scan.process', now()->addMinutes(30), ['type' => 'out']);
+        $attendanceUrl = URL::temporarySignedRoute(
+            'attendance.scan', 
+            now()->addHours(8), 
+            ['action' => 'process']
+        );
         
-        return view('employee.dashboard', compact('inUrl', 'outUrl'));
+        return view('employee.dashboard', compact('attendanceUrl'));
     })->name('dashboard');
 
     Route::middleware(['can:access-admin'])->prefix('admin')->group(function () {
@@ -40,7 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 });
 
-// Admin view to show the QR Code
 Route::get('/admin/generate-qr', [AttendanceController::class, 'showScanner'])->middleware('can:admin-only');
-// The URL the QR code points to (Employee clicks this via scan)
-Route::get('/clock-in/{type}', [AttendanceController::class, 'processScan'])->name('scan.process')->middleware(['auth', 'signed']);
+Route::get('/attendance/scan/{action}', [AttendanceController::class, 'processScan'])
+        ->name('attendance.scan')
+        ->middleware('signed');

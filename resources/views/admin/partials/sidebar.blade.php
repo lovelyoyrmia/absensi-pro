@@ -8,10 +8,10 @@
             <i>📊</i> Dashboard
         </a>
         <a href="{{ route('admin.attendance.index') }}" class="{{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}">
-            <i>📅</i> Attendance Logs
+            <i>📅</i> Log Kehadiran
         </a>
         <a href="{{ route('admin.employees.index') }}" class="{{ request()->routeIs('admin.employees.*') ? 'active' : '' }}">
-            <i>👥</i> Employees
+            <i>👥</i> Karyawan
         </a>
     </nav>
 
@@ -22,7 +22,7 @@
         </div>
         <form action="{{ route('logout') }}" method="POST">
             @csrf
-            <button type="submit" class="logout-btn">Logout</button>
+            <button type="submit" class="logout-btn">Keluar</button>
         </form>
     </div>
 </aside>

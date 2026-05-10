@@ -13,6 +13,7 @@ class Attendance extends Model
         'clock_in',
         'clock_out',
         'is_late',
+        'address'
     ];
 
     // 2. Tell Laravel to treat these as Date objects (Carbon)
@@ -22,6 +23,7 @@ class Attendance extends Model
         'clock_in' => 'datetime',
         'clock_out' => 'datetime',
         'is_late' => 'boolean',
+        'address' => 'string'
     ];
 
     /**

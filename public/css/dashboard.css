@@ -10,6 +10,73 @@ body {
     color: #1e293b;
 }
 
+/* Container untuk tombol agar berada di tengah */
+#scan-init-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 25px 0;
+}
+
+/* Styling Utama Tombol Scan */
+.login-btn {
+    background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+    color: white;
+    padding: 16px 32px;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+    width: 100%; /* Lebar penuh di mobile agar mudah ditekan */
+    max-width: 300px;
+    justify-content: center;
+}
+
+/* Efek Hover (Untuk Desktop) */
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px -5px rgba(37, 99, 235, 0.4);
+    filter: brightness(1.1);
+}
+
+/* Efek Active (Saat Ditekan) */
+.login-btn:active {
+    transform: translateY(1px);
+    filter: brightness(0.9);
+}
+
+/* Tambahan: Styling untuk pembungkus kamera (reader) */
+#reader {
+    background: #000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 3px solid #e2e8f0 !important;
+}
+
+/* Tombol Batal/Stop Scan */
+.logout-btn {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.logout-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
 .container {
     max-width: 800px;
     margin: 20px auto;

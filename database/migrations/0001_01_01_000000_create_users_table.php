@@ -48,10 +48,12 @@ return new class extends Migration
             $table->timestamp('clock_in')->nullable();
             $table->timestamp('clock_out')->nullable();
             $table->boolean('is_late')->default(false);
+            $table->text('address')->nullable();
             $table->timestamps();
         });
     }
 
+    
     /**
      * Reverse the migrations.
      */

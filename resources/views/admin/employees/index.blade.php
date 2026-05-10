@@ -2,8 +2,8 @@
 
 @section('content')
 <div class="page-header">
-    <h1>Employee Management</h1>
-    <a href="{{ route('admin.employees.create') }}" class="btn-add">+ Add New Employee</a>
+    <h1>Manajemen Karyawan</h1>
+    <a href="{{ route('admin.employees.create') }}" class="btn-add">+ Tambah Karyawan Baru</a>
 </div>
 
 <div class="card">
@@ -11,9 +11,9 @@
         <thead>
             <tr>
                 <th>NIP</th>
-                <th>Name</th>
+                <th>Nama</th>
                 <th>Email</th>
-                <th>Actions</th>
+                <th>Aksi</th>
             </tr>
         </thead>
         <tbody>

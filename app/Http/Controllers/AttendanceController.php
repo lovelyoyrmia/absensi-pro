@@ -7,6 +7,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 
 class AttendanceController extends Controller
@@ -39,45 +40,70 @@ class AttendanceController extends Controller
         return view('admin.qr-display', compact('inUrl', 'outUrl'));
     }
 
-    public function processScan($type) {
+    public function processScan(Request $request) {
         $user = auth()->user();
         $now = now();
-        $workStart = now()->setHour(9)->setMinute(0);
+        $today = Attendance::where('user_id', $user->id)
+                       ->today()
+                       ->first();
+        $lat = $request->cookie('user_lat');
+        $lng = $request->cookie('user_lng');
 
-        if ($type === 'in') {
-            // Prevent double clock-in
+        $currentTime = now()->format('H:i');
+        $limitTime = '20:00';
+
+        $address = "Lokasi tidak ditemukan";
+        if ($lat && $lng) {
+            $response = Http::withHeaders(['User-Agent' => 'AttendanceApp'])
+                ->get("https://nominatim.openstreetmap.org/reverse", [
+                    'format' => 'jsonv2',
+                    'lat' => $lat,
+                    'lon' => $lng,
+                ]);
+
+            if ($response->successful()) {
+                $address = $response->json()['display_name'] ?? "Unknown Address";
+            }
+        }
+
+        if (!$today) {
+            
             $exists = Attendance::where('user_id', $user->id)
                 ->today()
                 ->whereNotNull('clock_in')
                 ->exists();
-            if ($exists) return redirect('/dashboard')->with('error', 'Already clocked in today!');
-
+            if ($exists) return redirect('/dashboard')->with('error', 'Sudah Clock In!');
+            if ($currentTime > $limitTime) {
+                return redirect()->route('dashboard')->with('error', 'Batas waktu absen berakhir jam 12:00.');
+            }
             Attendance::create([
                 'user_id' => $user->id,
                 'date' => today(),
                 'clock_in' => $now,
-                'is_late' => $now->gt($workStart)
+                'is_late' => $currentTime > '09:00',
+                'address' => $address,
             ]);
-        } else {
-            $record = Attendance::where('user_id', $user->id)->today()->whereNull('clock_out')->first();
-            if ($record) $record->update(['clock_out' => $now]);
+            return redirect()->route('dashboard')->with('success', 'Berhasil Clock In!');
         }
-
-        return redirect('/dashboard')->with('success', 'Success! Status: ' . ($now->gt($workStart) ? 'LATE' : 'ON TIME'));
+        if (!$today->clock_out) {
+            $today->update(['clock_out' => $now]);
+            return redirect()->route('dashboard')->with('success', 'Berhasil Clock Out!');
+        }
+        
+        return redirect()->route('dashboard')->with('info', 'Anda sudah menyelesaikan absensi hari ini.');
     }
 
     public function adminDashboard()
     {
+        $attendanceUrl = URL::temporarySignedRoute(
+            'attendance.scan', 
+            now()->addHours(8), 
+            ['action' => 'process']
+        );
+
         $employees = User::where('role', 'employee')->get();
+        $todayAttendances = Attendance::with('user')->whereDate('date', today())->latest()->get();
 
-        $todayAttendances = Attendance::with('user')
-            ->whereDate('date', today())
-            ->latest()
-            ->get();
-
-        $inUrl = URL::temporarySignedRoute('scan.process', now()->addMinutes(1), ['type' => 'in']);
-        $outUrl = URL::temporarySignedRoute('scan.process', now()->addMinutes(1), ['type' => 'out']);
-
-        return view('admin.dashboard', compact('employees', 'todayAttendances', 'inUrl', 'outUrl'));
+        return view('admin.dashboard', compact('attendanceUrl', 'employees', 'todayAttendances'));
     }
 }
