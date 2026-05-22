@@ -27,6 +27,11 @@
         </div>
 
         <div class="form-group">
+            <label>Jabatan</label>
+            <input type="text" name="department" class="form-input" value="{{ old('department', $employee->department) }}" required>
+        </div>
+
+        <div class="form-group">
             <label>Nama Lengkap</label>
             <input type="text" name="name" class="form-input" value="{{ old('name', $employee->name) }}" required>
         </div>

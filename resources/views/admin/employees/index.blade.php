@@ -13,6 +13,7 @@
                 <th>NIP</th>
                 <th>Nama</th>
                 <th>Email</th>
+                <th>Jabatan</th>
                 <th>Aksi</th>
             </tr>
         </thead>
@@ -22,6 +23,7 @@
                 <td><code>{{ $employee->nip }}</code></td>
                 <td>{{ $employee->name }}</td>
                 <td>{{ $employee->email }}</td>
+                <td>{{ $employee->department }}</td>
                 <td>
                     <a href="{{ route('admin.employees.edit', $employee->id) }}" class="btn-edit">Edit</a>
                 </td>

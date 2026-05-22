@@ -31,6 +31,8 @@ Route::middleware(['auth'])->group(function () {
         return view('employee.dashboard', compact('attendanceUrl'));
     })->name('dashboard');
 
+    Route::post('/attendance/izin', [AttendanceController::class, 'storeIzin'])->name('attendance.store-izin');
+
     Route::middleware(['can:access-admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [AttendanceController::class, 'adminDashboard'])->name('admin.dashboard');
         Route::get('/employees', [EmployeeController::class, 'index'])->name('admin.employees.index');
@@ -39,6 +41,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/employees/{id}/edit', [EmployeeController::class, 'edit'])->name('admin.employees.edit');
         Route::put('/employees/{id}', [EmployeeController::class, 'update'])->name('admin.employees.update');
         Route::post('/employees', [EmployeeController::class, 'store'])->name('admin.employees.store');
+
+        Route::get('/leaves-approval', [AttendanceController::class, 'leavesIndex'])->name('admin.leaves.index');
+        Route::post('/leaves-approval/{id}/approve', [AttendanceController::class, 'approveLeave'])->name('admin.leaves.approve');
+        Route::post('/leaves-approval/{id}/reject', [AttendanceController::class, 'rejectLeave'])->name('admin.leaves.reject');
     });
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 });

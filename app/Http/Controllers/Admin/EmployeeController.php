@@ -40,6 +40,7 @@ class EmployeeController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'nip' => $generatedNip,
+            'department' => $request->department,
             'role' => 'employee',
         ]);
 
@@ -60,10 +61,12 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|min:8',
+            'department' => 'required|string|max:255',
         ]);
 
         $employee->name = $request->name;
         $employee->email = $request->email;
+        $employee->department = $request->department;
         if ($request->filled('password')) {
             $employee->password = Hash::make($request->password);
         }

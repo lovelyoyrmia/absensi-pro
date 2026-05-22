@@ -31,6 +31,11 @@
         </div>
 
         <div class="form-group">
+            <label>Jabatan</label>
+            <input type="text" name="department" class="form-input" placeholder="e.g. Staff" value="{{ old('department') }}" required>
+        </div>
+
+        <div class="form-group">
             <label>Kata Sandi</label>
             <input type="password" name="password" class="form-input" placeholder="Minimum 8 characters" required>
             <small style="color: #64748b;">NIP akan di generate otomatis setelah disimpan.</small>

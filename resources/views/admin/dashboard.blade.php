@@ -38,11 +38,21 @@
                     <td><strong>{{ $record->user->name }}</strong><br><small>{{ $record->user->nip }}</small></td>
                     <td>{{ $record->clock_in->format('H:i') }}</td>
                     <td>{{ $record->clock_out ? $record->clock_out->format('H:i') : '--:--' }}</td>
-                    <td>{{ $record->address }}</td>
                     <td>
-                        <span class="status-pill {{ $record->is_late ? 'pill-red' : 'pill-green' }}">
+                        @if($record->status == 'masuk')
+                            {{ $record->address }}
+                        @else
+                            <span style="color: #64748b; font-style: italic;">({{ ucfirst($record->status) }}) {{ $record->notes }}</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($record->status == 'masuk')
+                            <span class="dot {{ $record->is_late ? 'dot-red' : 'dot-green' }}"></span>
                             {{ $record->is_late ? 'TELAT' : 'TEPAT' }}
-                        </span>
+                        @else
+                            <span class="dot" style="background-color: #eab308;"></span>
+                            {{ ucfirst($record->status) }}
+                        @endif
                     </td>
                 </tr>
                 @endforeach

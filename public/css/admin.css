@@ -241,3 +241,30 @@ code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; }
     list-style: none;
     font-size: 13px;
 }
+
+
+.logo-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+/* If using a standard PNG/JPG image file */
+.logo {
+    height: 64px;
+    width: auto;
+    object-fit: contain;
+}
+
+
+/* Status Dots */
+.dot {
+    height: 10px;
+    width: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+.dot-green { background-color: #22c55e; }
+.dot-red { background-color: #ef4444; }

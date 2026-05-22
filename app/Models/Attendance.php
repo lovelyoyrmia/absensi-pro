@@ -13,7 +13,10 @@ class Attendance extends Model
         'clock_in',
         'clock_out',
         'is_late',
-        'address'
+        'address',
+        'status',
+        'notes',
+        'approval_status'
     ];
 
     // 2. Tell Laravel to treat these as Date objects (Carbon)
@@ -23,7 +26,10 @@ class Attendance extends Model
         'clock_in' => 'datetime',
         'clock_out' => 'datetime',
         'is_late' => 'boolean',
-        'address' => 'string'
+        'address' => 'string',
+        'status' => 'string',
+        'approval_status' => 'string',
+        'notes' => 'string',
     ];
 
     /**
@@ -45,6 +51,6 @@ class Attendance extends Model
 
     public function scopeToday($query)
     {
-        return $query->whereDate('date', now()->toDateString());
+        return $query->whereDate('date', now()->setTimezone('Asia/Jakarta')->toDateString());
     }
 }

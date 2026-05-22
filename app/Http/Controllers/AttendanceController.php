@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\User;
 use Carbon\Carbon;
+use DateTime;
+use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -14,26 +16,27 @@ class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
-        $selectedDate = $request->input('date', now()->toDateString());
+        $selectedDate = $request->input('date', now()->setTimezone('Asia/Jakarta')->toDateString());
 
-        $attendances = Attendance::with('user')
-            ->whereDate('date', $selectedDate)
-            ->latest()
+        $employees = User::where('role', 'employee') 
+            ->with(['attendances' => function($query) use ($selectedDate) {
+                $query->whereDate('date', $selectedDate);
+            }])
             ->get();
 
-        return view('admin.attendance.index', compact('attendances', 'selectedDate'));
+        return view('admin.attendance.index', compact('employees', 'selectedDate'));
     }
 
     public function showScanner() {
         $inUrl = URL::temporarySignedRoute(
             'scan.process', 
-            now()->addMinutes(1), 
+            now()->setTimezone('Asia/Jakarta')->addMinutes(1), 
             ['type' => 'in']
         );
 
         $outUrl = URL::temporarySignedRoute(
             'scan.process', 
-            now()->addMinutes(1), 
+            now()->setTimezone('Asia/Jakarta')->addMinutes(1), 
             ['type' => 'out']
         );
 
@@ -42,15 +45,15 @@ class AttendanceController extends Controller
 
     public function processScan(Request $request) {
         $user = auth()->user();
-        $now = now();
+        $now = now()->setTimezone('Asia/Jakarta');
         $today = Attendance::where('user_id', $user->id)
                        ->today()
                        ->first();
-        $lat = $request->cookie('user_lat');
-        $lng = $request->cookie('user_lng');
+        $lat = $_COOKIE['user_lat'] ?? null;
+        $lng = $_COOKIE['user_lng'] ?? null;
 
-        $currentTime = now()->format('H:i');
-        $limitTime = '20:00';
+        $currentTime = $now->format('H:i');
+        $limitTime = '17:00';
 
         $address = "Lokasi tidak ditemukan";
         if ($lat && $lng) {
@@ -74,13 +77,13 @@ class AttendanceController extends Controller
                 ->exists();
             if ($exists) return redirect('/dashboard')->with('error', 'Sudah Clock In!');
             if ($currentTime > $limitTime) {
-                return redirect()->route('dashboard')->with('error', 'Batas waktu absen berakhir jam 12:00.');
+                return redirect()->route('dashboard')->with('error', 'Batas waktu absen berakhir jam 17:00.');
             }
             Attendance::create([
                 'user_id' => $user->id,
-                'date' => today(),
+                'date' => today()->setTimezone('Asia/Jakarta'),
                 'clock_in' => $now,
-                'is_late' => $currentTime > '09:00',
+                'is_late' => $currentTime > '08:00',
                 'address' => $address,
             ]);
             return redirect()->route('dashboard')->with('success', 'Berhasil Clock In!');
@@ -93,17 +96,89 @@ class AttendanceController extends Controller
         return redirect()->route('dashboard')->with('info', 'Anda sudah menyelesaikan absensi hari ini.');
     }
 
+    public function storeIzin(Request $request)
+    {
+        $request->validate([
+            'status' => 'required|in:sakit,izin,cuti',
+            'notes' => 'required|string|max:500',
+        ]);
+
+        $user = auth()->user();
+        $timezoneDate = now()->setTimezone('Asia/Jakarta');
+
+        $exists = Attendance::where('user_id', $user->id)
+            ->today()
+            ->exists();
+
+        if ($exists) {
+            return redirect()->back()->with('error', 'Anda sudah mengisi absensi atau izin hari ini!');
+        }
+
+        Attendance::create([
+            'user_id' => $user->id,
+            'date' => $timezoneDate->toDateString(),
+            'clock_in' => $timezoneDate, // Samakan penanda waktu isi dokumen
+            'clock_out' => $timezoneDate, // Langsung tutup agar tidak diminta clock out lagi
+            'is_late' => false,
+            'status' => $request->status,
+            'notes' => $request->notes,
+            'address' => 'Pengajuan Non-Kehadiran (' . ucfirst($request->status) . ')',
+            'approval_status' => 'pending',
+        ]);
+
+        return redirect()->route('dashboard')->with('success', 'Keterangan ' . ucfirst($request->status) . ' berhasil disimpan!');
+    }
+
     public function adminDashboard()
     {
         $attendanceUrl = URL::temporarySignedRoute(
             'attendance.scan', 
-            now()->addHours(8), 
+            now()->setTimezone('Asia/Jakarta')->addHours(8), 
             ['action' => 'process']
         );
 
         $employees = User::where('role', 'employee')->get();
-        $todayAttendances = Attendance::with('user')->whereDate('date', today())->latest()->get();
+        $todayAttendances = Attendance::with('user')->whereDate('date', today()->setTimezone('Asia/Jakarta'))->latest()->get();
 
         return view('admin.dashboard', compact('attendanceUrl', 'employees', 'todayAttendances'));
+    }
+
+    public function leavesIndex()
+    {
+        $submissions = Attendance::whereIn('status', ['sakit', 'izin', 'cuti'])
+            ->where('approval_status', 'pending')
+            ->with('user')
+            ->latest()
+            ->get();
+
+        return view('admin.attendance.leaves', compact('submissions'));
+    }
+
+    public function approveLeave($id)
+    {
+        $attendance = Attendance::findOrFail($id);
+        $now = now()->setTimezone('Asia/Jakarta');
+
+        $attendance->update([
+            'approval_status' => 'approved',
+            'clock_in' => $now, 
+            'clock_out' => $now, 
+            'address' => 'Disetujui Admin: Pengajuan Non-Kehadiran (' . ucfirst($attendance->status) . ')'
+        ]);
+
+        return redirect()->back()->with('success', 'Pengajuan izin karyawan berhasil disetujui!');
+    }
+
+    // 3. Aksi menolak pengajuan
+    public function rejectLeave($id)
+    {
+        $attendance = Attendance::findOrFail($id);
+        
+        $attendance->update([
+            'approval_status' => 'rejected',
+            'address' => 'Ditolak oleh Admin'
+        ]);
+
+        return redirect()->back()->with('info', 'Pengajuan izin karyawan telah ditolak.');
     }
 }
