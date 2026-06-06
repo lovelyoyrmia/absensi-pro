@@ -101,8 +101,11 @@
         @php
             $today = auth()->user()->attendances()->whereDate('date', now()->setTimezone('Asia/Jakarta')->toDateString())->first();
             $currentTime = now()->setTimezone('Asia/Jakarta')->format('H:i');
-            $isTooLate = $currentTime > '17:00';
-            $canAccessClockOut = $today && $today->status === 'masuk' && !$today->clock_out && $currentTime >= '17:00';
+            $settings = \App\Models\Setting::pluck('value', 'key')->all();
+            $startTime = $settings['work_start_time'] ?? '08:00';
+            $limitTime = $settings['work_limit_time'] ?? '17:00';
+            $isTooLate = $currentTime > $limitTime;
+            $canAccessClockOut = $today && $today->status === 'masuk' && !$today->clock_out && $currentTime >= $limitTime;
         @endphp
 
         @if(!$today)
@@ -112,11 +115,11 @@
                 @if($isTooLate)
                     <div style="background: #fee2e2; color: #991b1b; padding: 15px; border-radius: 8px; margin-top: 15px;">
                         <p><strong>Maaf, Batas Absen Berakhir</strong></p>
-                        <p style="font-size: 13px;">Batas waktu Clock In adalah pukul 17:00. Silakan hubungi Admin.</p>
+                        <p style="font-size: 13px;">Batas waktu Clock In adalah pukul {{ $limitTime }}. Silakan hubungi Admin.</p>
                     </div>
                 @else
                     <p>Gunakan kamera untuk melakukan <strong>Clock In</strong> atau ajukan keterangan jika berhalangan.</p>
-                    <p style="font-size: 12px; color: #64748b;">(Batas maksimal jam 17:00)</p>
+                    <p style="font-size: 12px; color: #64748b;">(Batas maksimal jam {{ $limitTime }})</p>
 
                     <div id="reader-wrapper" style="display: none; margin-top: 20px;">
                         <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto; border-radius: 10px; overflow: hidden; border: 2px solid #ddd;"></div>
@@ -184,7 +187,7 @@
                         </button>
                     </div>
                 @else
-                    <p style="font-size: 13px; color: #64748b; font-style: italic;">Tombol Clock Out otomatis terbuka pukul 17:00.</p>
+                    <p style="font-size: 13px; color: #64748b; font-style: italic;">Tombol Clock Out otomatis terbuka pukul {{ $limitTime }}.</p>
                 @endif
             </div>
         @else

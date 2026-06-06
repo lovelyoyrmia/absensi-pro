@@ -58,6 +58,11 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isOwner(): bool
+    {
+        return $this->role === 'owner';
+    }
+
     /**
      * Relationship: Get all attendance records for the user.
      */

@@ -3,6 +3,9 @@
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Owner\OwnerAdminController;
+use App\Http\Controllers\Owner\OwnerDashboardController;
+use App\Http\Controllers\Owner\OwnerSettingController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -31,9 +34,21 @@ Route::middleware(['auth'])->group(function () {
         return view('employee.dashboard', compact('attendanceUrl'));
     })->name('dashboard');
 
+    // Route Group for Owner Operations
+    Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(function () {
+        Route::get('/dashboard', [OwnerDashboardController::class, 'index'])->name('dashboard');
+        
+        Route::get('/manage-admins', [OwnerAdminController::class, 'index'])->name('admins.index');
+        Route::post('/manage-admins/store', [OwnerAdminController::class, 'store'])->name('admins.store');
+        Route::delete('/manage-admins/{id}', [OwnerAdminController::class, 'destroy'])->name('admins.destroy');
+        
+        Route::get('/settings', [OwnerSettingController::class, 'index'])->name('settings.index');
+        Route::post('/settings/update', [OwnerSettingController::class, 'update'])->name('settings.update');
+    });
+
     Route::post('/attendance/izin', [AttendanceController::class, 'storeIzin'])->name('attendance.store-izin');
 
-    Route::middleware(['can:access-admin'])->prefix('admin')->group(function () {
+    Route::middleware(['owner', 'can:access-admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [AttendanceController::class, 'adminDashboard'])->name('admin.dashboard');
         Route::get('/employees', [EmployeeController::class, 'index'])->name('admin.employees.index');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('admin.attendance.index');

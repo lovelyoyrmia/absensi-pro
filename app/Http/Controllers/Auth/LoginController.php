@@ -26,10 +26,13 @@ class LoginController extends Controller
 
         if (Auth::attempt([$fieldType => $request->login, 'password' => $request->password])) {
             $request->session()->regenerate();
-
-            if (Auth::user()->isAdmin()) {
+            
+            if (Auth::user()->isOwner()) {
+                return redirect()->intended('/owner/dashboard');
+            } elseif (Auth::user()->isAdmin()) {
                 return redirect()->intended('/admin/dashboard');
             }
+            
             return redirect()->intended('/dashboard');
         }
 

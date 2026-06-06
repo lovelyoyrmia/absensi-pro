@@ -1,5 +1,7 @@
 @extends('layouts.admin')
 @section('content')
+
+@if(!$user->isOwner())
 <section class="qr-section">
     <div class="card qr-card" style="text-align: center;">
         <h3>Sistem Absensi QR</h3>
@@ -18,6 +20,7 @@
         </div>
     </div>
 </section>
+@endif
 
 <section class="table-section">
     <div class="card">

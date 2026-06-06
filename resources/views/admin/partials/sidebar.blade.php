@@ -6,18 +6,33 @@
     </div>
 
     <nav class="sidebar-nav">
-        <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-            <i>📊</i> Dashboard
+        @if(auth()->user()->role === 'owner')
+            <a href="{{ route('owner.dashboard') }}" class="{{ request()->routeIs('owner.dashboard') ? 'active' : '' }}">
+                🏢 Executive Dashboard
+            </a>
+        @else
+            <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                📊 Dashboard
+            </a>
+        @endif
+
+        <a href="{{ route('admin.attendance.index') }}" class="{{ request()->routeIs('admin.attendance.index') ? 'active' : '' }}">
+            📊 Log Kehadiran
         </a>
-        <a href="{{ route('admin.attendance.index') }}" class="{{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}">
-            <i>📅</i> Log Kehadiran
-        </a>
+        
         <a href="{{ route('admin.leaves.index') }}" class="{{ request()->routeIs('admin.leaves.index') ? 'active' : '' }}">
-            <i>📅</i> Pengajuan Izin & Cuti
+            📝 Persetujuan Cuti
         </a>
-        <a href="{{ route('admin.employees.index') }}" class="{{ request()->routeIs('admin.employees.*') ? 'active' : '' }}">
-            <i>👥</i> Karyawan
-        </a>
+
+        @if(auth()->user()->role === 'owner')
+            <div style="margin: 20px 0 10px 15px; font-size: 11px; color: #94a3b8; font-weight: bold; letter-spacing: 1px;">SYSTEM CONTROL</div>
+            <a href="{{ route('owner.admins.index') }}">🔑 Kelola Akun Admin</a>
+            <a href="{{ route('owner.settings.index') }}">⚙️ Pengaturan Jam Kerja</a>
+        @else
+            <a href="{{ route('admin.employees.index') }}" class="{{ request()->routeIs('admin.employees.index') ? 'active' : '' }}">
+                👥 Karyawan
+            </a>
+        @endif
     </nav>
 
     <div class="sidebar-footer">

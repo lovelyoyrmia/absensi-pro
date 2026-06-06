@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Setting;
 use App\Models\User;
 use Carbon\Carbon;
 use DateTime;
@@ -53,7 +54,9 @@ class AttendanceController extends Controller
         $lng = $_COOKIE['user_lng'] ?? null;
 
         $currentTime = $now->format('H:i');
-        $limitTime = '17:00';
+        $settings = Setting::pluck('value', 'key')->all();
+        $startTime = $settings['work_start_time'] ?? '08:00';
+        $limitTime = $settings['work_limit_time'] ?? '17:00';
 
         $address = "Lokasi tidak ditemukan";
         if ($lat && $lng) {
@@ -77,13 +80,13 @@ class AttendanceController extends Controller
                 ->exists();
             if ($exists) return redirect('/dashboard')->with('error', 'Sudah Clock In!');
             if ($currentTime > $limitTime) {
-                return redirect()->route('dashboard')->with('error', 'Batas waktu absen berakhir jam 17:00.');
+                return redirect()->route('dashboard')->with('error', 'Batas waktu absen berakhir jam ' . $limitTime . '.');
             }
             Attendance::create([
                 'user_id' => $user->id,
                 'date' => today()->setTimezone('Asia/Jakarta'),
                 'clock_in' => $now,
-                'is_late' => $currentTime > '08:00',
+                'is_late' => $currentTime > $startTime,
                 'address' => $address,
             ]);
             return redirect()->route('dashboard')->with('success', 'Berhasil Clock In!');
@@ -139,8 +142,8 @@ class AttendanceController extends Controller
 
         $employees = User::where('role', 'employee')->get();
         $todayAttendances = Attendance::with('user')->whereDate('date', today()->setTimezone('Asia/Jakarta'))->latest()->get();
-
-        return view('admin.dashboard', compact('attendanceUrl', 'employees', 'todayAttendances'));
+        $user = auth()->user();
+        return view('admin.dashboard', compact('attendanceUrl', 'employees', 'todayAttendances', 'user'));
     }
 
     public function leavesIndex()
