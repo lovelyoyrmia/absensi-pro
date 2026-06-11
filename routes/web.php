@@ -48,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/attendance/izin', [AttendanceController::class, 'storeIzin'])->name('attendance.store-izin');
 
-    Route::middleware(['owner', 'can:access-admin'])->prefix('admin')->group(function () {
+    Route::middleware(['can:access-admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [AttendanceController::class, 'adminDashboard'])->name('admin.dashboard');
         Route::get('/employees', [EmployeeController::class, 'index'])->name('admin.employees.index');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('admin.attendance.index');
