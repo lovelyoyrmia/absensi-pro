@@ -16,13 +16,42 @@
             </a>
         @endif
 
-        <a href="{{ route('admin.attendance.index') }}" class="{{ request()->routeIs('admin.attendance.index') ? 'active' : '' }}">
-            📊 Log Kehadiran
-        </a>
-        
-        <a href="{{ route('admin.leaves.index') }}" class="{{ request()->routeIs('admin.leaves.index') ? 'active' : '' }}">
-            📝 Persetujuan Cuti
-        </a>
+        @can('access-admin')
+            <div style="margin: 15px 0 5px 10px; font-size: 11px; color: #94a3b8; font-weight: bold; letter-spacing: 1px;">OPERASIONAL</div>
+            
+            <a href="{{ route('admin.attendance.index') }}" class="{{ request()->routeIs('admin.attendance.index') ? 'active' : '' }}">
+                📊 Log Kehadiran Hari Ini
+            </a>
+            
+            <a href="{{ route('admin.leaves.index') }}" class="{{ request()->routeIs('admin.leaves.*') ? 'active' : '' }}" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📝 Persetujuan Cuti</span>
+                
+                @php
+                    $pendingCount = \App\Models\Attendance::where('approval_status', 'pending')->count();
+                @endphp
+                @if($pendingCount > 0)
+                    <span style="background: #ef4444; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: bold;">
+                        {{ $pendingCount }}
+                    </span>
+                @endif
+            </a>
+
+            <a href="{{ route('admin.shifts.index') }}" class="{{ request()->routeIs('admin.shifts.*') ? 'active' : '' }}">
+                📅 Atur Shift Staff CS
+            </a>
+
+
+            {{-- 3. MENU DUO LAPORAN BARU (MANAJEMEN REKAP) --}}
+            <div style="margin: 20px 0 5px 10px; font-size: 11px; color: #94a3b8; font-weight: bold; letter-spacing: 1px;">LAPORAN REKAP</div>
+
+            <a href="{{ route('admin.reports.staff') }}" class="{{ request()->routeIs('admin.reports.staff') ? 'active' : '' }}">
+                🗂️ Berkas Laporan Per Staff
+            </a>
+
+            <a href="{{ route('admin.reports.attendance') }}" class="{{ request()->routeIs('admin.reports.attendance') ? 'active' : '' }}">
+                📉 Ringkasan Kehadiran & Potongan
+            </a>
+        @endcan
 
         @if(auth()->user()->role === 'owner')
             <div style="margin: 20px 0 10px 15px; font-size: 11px; color: #94a3b8; font-weight: bold; letter-spacing: 1px;">SYSTEM CONTROL</div>

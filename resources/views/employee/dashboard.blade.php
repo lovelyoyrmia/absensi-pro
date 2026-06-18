@@ -1,3 +1,52 @@
+@php
+    use Carbon\Carbon;
+
+    $now = Carbon::now()->setTimezone('Asia/Jakarta');
+    $todayDate = $now->toDateString();
+    
+    // 1. Cari rekam jejak absensi/cuti hari ini
+    $today = auth()->user()->attendances()->whereDate('date', $todayDate)->first();
+
+    // 2. Set standar default untuk divisi Finance (Pagi)
+    $shiftName = "Pagi";
+    $startTimeString = "08:00"; 
+
+    // 3. Jika karyawan adalah CS, ambil jadwal aslinya dari tabel 'employee_shifts'
+    if (auth()->user()->division === 'CS') {
+        $schedule = DB::table('employee_shifts')
+            ->where('user_id', auth()->id())
+            ->whereDate('date', $todayDate)
+            ->first();
+
+        if ($schedule) {
+            $shiftName = $schedule->shift_name;
+            $startTimeString = $schedule->start_time; // Misal: 07:00, 15:00, atau 23:00
+        }
+    }
+
+    // 4. LOGIKA PINTAR BATAS ABSEN (Mendukung Shift Malam lintas hari)
+    // Buat objek waktu mulai shift yang sesungguhnya pada hari ini
+    $shiftStartDateTime = Carbon::parse($todayDate . ' ' . $startTimeString, 'Asia/Jakarta');
+    
+    // Batas toleransi penguncian tombol: 4 jam setelah shift dimulai
+    $limitDateTime = $shiftStartDateTime->copy()->addHours(4);
+
+    // Kunci sukses: Bandingkan objek Carbon Waktu Sekarang dengan Waktu Batas Maksimal
+    $isTooLate = $now->greaterThan($limitDateTime);
+    
+    // Format teks untuk ditampilkan ke layar HP karyawan
+    $limitTimeDisplay = $limitDateTime->format('H:i');
+
+    // 5. Validasi Tombol Clock Out (Wajib Kerja Minimal 8 Jam)
+    $canAccessClockOut = false;
+    if ($today && $today->status === 'masuk' && !$today->clock_out) {
+        $workDurationMinutes = Carbon::parse($today->clock_in)->diffInMinutes($now);
+        if ($workDurationMinutes >= (8 * 60)) {
+            $canAccessClockOut = true;
+        }
+    }
+@endphp
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,49 +143,41 @@
 
         <div class="profile-card">
             <h1>Halo, {{ auth()->user()->name }}</h1>
-            <p class="nip">NIP: {{ auth()->user()->nip }}</p>
+            <p class="nip">NIP: {{ auth()->user()->nip }} | Divisi: {{ auth()->user()->division ?? 'Finance' }}</p>
         </div>
 
         <div class="status-section">
-        @php
-            $today = auth()->user()->attendances()->whereDate('date', now()->setTimezone('Asia/Jakarta')->toDateString())->first();
-            $currentTime = now()->setTimezone('Asia/Jakarta')->format('H:i');
-            $settings = \App\Models\Setting::pluck('value', 'key')->all();
-            $startTime = $settings['work_start_time'] ?? '08:00';
-            $limitTime = $settings['work_limit_time'] ?? '17:00';
-            $isTooLate = $currentTime > $limitTime;
-            $canAccessClockOut = $today && $today->status === 'masuk' && !$today->clock_out && $currentTime >= $limitTime;
-        @endphp
-
         @if(!$today)
             <div class="status-card waiting">
-                <h3>Siap Bekerja?</h3>
+                <h3>Siap Bekerja Hari Ini?</h3>
+                
+                <div style="background: #e0e7ff; color: #4f46e5; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; font-weight: 600; text-align: center;">
+                    📌 Jadwal Anda: {{ $shiftName }} (Mulai: {{ Carbon::parse($startTimeString)->format('H:i') }} WIB)
+                </div>
                 
                 @if($isTooLate)
                     <div style="background: #fee2e2; color: #991b1b; padding: 15px; border-radius: 8px; margin-top: 15px;">
                         <p><strong>Maaf, Batas Absen Berakhir</strong></p>
-                        <p style="font-size: 13px;">Batas waktu Clock In adalah pukul {{ $limitTime }}. Silakan hubungi Admin.</p>
+                        <p style="font-size: 13px;">Batas waktu toleransi Clock In untuk {{ $shiftName }} Anda adalah pukul {{ $limitTimeDisplay }} WIB. Silakan hubungi Admin.</p>
                     </div>
                 @else
                     <p>Gunakan kamera untuk melakukan <strong>Clock In</strong> atau ajukan keterangan jika berhalangan.</p>
-                    <p style="font-size: 12px; color: #64748b;">(Batas maksimal jam {{ $limitTime }})</p>
-
+                    <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">(Batas maksimal masuk jam {{ $limitTimeDisplay }} WIB)</p>
                     <div id="reader-wrapper" style="display: none; margin-top: 20px;">
                         <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto; border-radius: 10px; overflow: hidden; border: 2px solid #ddd;"></div>
                         <button type="button" onclick="stopScanner()" class="logout-btn" style="margin-top: 10px;">Batal</button>
                     </div>
 
-                    <div id="scan-init-btn" style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-                        <button type="button" onclick="startScanner()" class="login-btn" style="margin-top: 20px; width: 100%; max-width: 300px;">
+                    <div id="scan-init-btn" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <button type="button" onclick="startScanner()" class="login-btn" style="width: 100%; max-width: 300px;">
                             📸 Buka Kamera Scan
                         </button>
                         
-                        <button type="button" onclick="toggleFormIzin()" class="btn-toggle-izin" id="btn-toggle-text">
+                        <button type="button" onclick="toggleFormIzin()" class="btn-toggle-izin" id="btn-toggle-text" style="width: 100%; max-width: 300px;">
                             📝 Ajukan Sakit / Izin / Cuti
                         </button>
                     </div>
 
-                    <!-- FORM COMPONENT FOR LEAVE/SICK SUBMISSION -->
                     <div id="form-izin-container" class="form-izin">
                         <h4 style="margin-top: 0; color: #1e293b; font-size: 16px; margin-bottom: 15px;">Form Keterangan Tidak Masuk</h4>
                         <form action="{{ route('attendance.store-izin') }}" method="POST">
@@ -162,15 +203,14 @@
         @elseif($today && $today->status !== 'masuk')
             <div class="status-card completed" style="background: #fef08a; border-left: 5px solid #eab308; color: #713f12;">
                 <h3>Status Hari Ini: <span style="text-transform: uppercase; font-weight: bold;">{{ $today->status }}</span></h3>
-                <p style="margin-top: 10px; color: #854d0e;">Keterangan Anda: "<i>{{ $today->notes }}</i>"</p>
+                <p style="margin-top: 10px; color: #854d0e;">Anda tidak perlu mengabsen karena sistem mencatat keterangan: "<i>{{ $today->notes }}</i>"</p>
                 <div style="font-size: 40px; margin-top: 10px;">📅</div>
             </div>
 
         @elseif($today && !$today->clock_out)
-            <!-- KONDISI JIKA SEDANG MASUK KERJA DAN BELUM CLOCK OUT -->
             <div class="status-card {{ $today->is_late ? 'late' : 'ontime' }}">
-                <h3>Sedang Bekerja</h3>
-                <p>Masuk pada: <strong>{{ $today->clock_in->format('H:i') }}</strong></p>
+                <h3>Sedang Bekerja ({{ $today->shift_name ?? 'Pagi' }})</h3>
+                <p>Masuk pada: <strong>{{ \Carbon\Carbon::parse($today->clock_in)->format('H:i') }}</strong></p>
                 <span class="badge">{{ $today->is_late ? 'TELAT' : 'TEPAT' }}</span>
                 
                 <hr style="margin: 20px 0; border-top: 1px solid rgba(0,0,0,0.1);">
@@ -187,13 +227,16 @@
                         </button>
                     </div>
                 @else
-                    <p style="font-size: 13px; color: #64748b; font-style: italic;">Tombol Clock Out otomatis terbuka pukul {{ $limitTime }}.</p>
+                    <div style="background: #fff7ed; color: #c2410c; padding: 12px; border-radius: 8px; border: 1px solid #ffedd5; font-size: 13px; font-weight: 600; text-align: center;">
+                        ⚠️ Tombol Pulang Terkunci: Anda wajib menyelesaikan durasi kerja minimal 8 jam kerja sebelum diizinkan Clock Out.
+                    </div>
                 @endif
             </div>
         @else
             <div class="status-card completed">
                 <h3>Shift Selesai</h3>
                 <div style="font-size: 40px; margin-top: 10px;">✅</div>
+                <p style="font-size: 13px; color: #64748b;">Sampai jumpa di shift berikutnya!</p>
             </div>
         @endif
     </div>
@@ -280,9 +323,14 @@
                         { fps: 10, qrbox: 250 },
                         (decodedText) => {
                             html5QrCode.stop().then(() => {
-                                document.cookie = "user_lat=" + lat + "; max-age=60; path=/";
-                                document.cookie = "user_lng=" + lng + "; max-age=60; path=/";
-                                window.location.href = decodedText;
+                                // PERBAIKAN: Menulis cookie dengan flag eksplisit SameSite & Path
+                                document.cookie = "user_lat=" + lat + "; max-age=60; path=/; SameSite=Lax";
+                                document.cookie = "user_lng=" + lng + "; max-age=60; path=/; SameSite=Lax";
+                                
+                                // Memberikan delay 300ms agar browser selesai mencatat cookie sebelum pindah halaman
+                                setTimeout(() => {
+                                    window.location.href = decodedText;
+                                }, 300);
                             });
                         }
                     ).catch(err => alert("Kamera Error: " + err));
@@ -306,6 +354,7 @@
             alert("Browser Anda tidak mendukung deteksi lokasi.");
         }
     }
+    
     function stopScanner() {
         if (html5QrCode) {
             html5QrCode.stop().then(() => {

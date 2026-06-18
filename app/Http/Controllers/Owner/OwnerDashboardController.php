@@ -13,37 +13,68 @@ class OwnerDashboardController extends Controller
     public function index()
     {
         $now = Carbon::now()->setTimezone('Asia/Jakarta');
-        $startOfMonth = $now->copy()->startOfMonth();
-        $endOfMonth = $now->copy()->endOfMonth();
+        $todayDate = $now->toDateString();
+        
+        // Batas awal dan akhir bulan ini untuk kalkulasi makro
+        $startOfMonth = $now->copy()->startOfMonth()->toDateString();
+        $endOfMonth = $now->copy()->endOfMonth()->toDateString();
+        
+        // Batas awal dan akhir minggu ini
+        $startOfWeek = $now->copy()->startOfWeek()->toDateString();
+        $endOfWeek = $now->copy()->endOfWeek()->toDateString();
 
+        // 1. Perhitungan Jumlah Struktur Organisasi
         $totalEmployees = User::where('role', 'employee')->count();
         $totalAdmins = User::where('role', 'admin')->count();
+
+        // 2. Perhitungan Kehadiran Terdistribusi (Harian, Mingguan, Bulanan)
+        $presentToday = Attendance::whereDate('date', $todayDate)
+            ->where('status', 'masuk')
+            ->count();
+
+        $presentThisWeek = Attendance::whereBetween('date', [$startOfWeek, $endOfWeek])
+            ->where('status', 'masuk')
+            ->count();
+
+        $presentThisMonth = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->where('status', 'masuk')
+            ->count();
+
+        // 3. Menghitung Kasus Keterlambatan Global (Kunci Error Anda)
+        $globalLateCount = Attendance::where('is_late', true)->count();
         
-        $monthlyPresent = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])
-                            ->where('status', 'masuk')
-                            ->where('approval_status', 'approved')
-                            ->count();
-
+        // Menghitung jumlah telat khusus bulan ini (untuk kartu stats)
         $monthlyLate = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])
-                            ->where('is_late', true)
-                            ->count();
+            ->where('is_late', true)
+            ->count();
 
+        // 4. Kalkulasi Total Hemat Saldo Potongan Komparatif
+        // Aturan: Telat dipotong Rp 50.000, jika Anda punya logika Alpha silakan diakumulasikan di sini
+        $globalDeductionTotal = Attendance::where('is_late', true)->count() * 50000;
+
+        // 5. Data Grafik Sederhana (7 Hari Terakhir)
         $chartData = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = $now->copy()->subDays($i)->toDateString();
             $chartData[] = [
                 'date' => $now->copy()->subDays($i)->format('d M'),
-                'count' => Attendance::where('date', $date)->where('status', 'masuk')->count()
+                'count' => Attendance::whereDate('date', $date)->where('status', 'masuk')->count()
             ];
         }
 
+        // 6. Daftar Admin Aktif untuk Side-Widget Panel
         $admins = User::where('role', 'admin')->latest()->get();
 
+        // Mengirimkan SEMUA variabel ke dalam view blade owner
         return view('owner.dashboard', compact(
             'totalEmployees', 
             'totalAdmins', 
-            'monthlyPresent', 
-            'monthlyLate', 
+            'presentToday',
+            'presentThisWeek',
+            'presentThisMonth',
+            'globalLateCount', 
+            'monthlyLate',
+            'globalDeductionTotal',
             'chartData',
             'admins'
         ));

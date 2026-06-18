@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminReportController;
+use App\Http\Controllers\Admin\AdminShiftController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\LoginController;
@@ -56,7 +58,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/employees/{id}/edit', [EmployeeController::class, 'edit'])->name('admin.employees.edit');
         Route::put('/employees/{id}', [EmployeeController::class, 'update'])->name('admin.employees.update');
         Route::post('/employees', [EmployeeController::class, 'store'])->name('admin.employees.store');
-
+        Route::get('/reports/staff', [AdminReportController::class, 'staffReport'])->name('admin.reports.staff');
+        Route::get('/reports/attendance', [AdminReportController::class, 'attendanceReport'])->name('admin.reports.attendance');
+        Route::get('/shifts', [AdminShiftController::class, 'index'])->name('admin.shifts.index');
+        Route::post('/shifts', [AdminShiftController::class, 'store'])->name('admin.shifts.store');
+        Route::delete('/shifts/{id}', [AdminShiftController::class, 'destroy'])->name('admin.shifts.destroy');
         Route::get('/leaves-approval', [AttendanceController::class, 'leavesIndex'])->name('admin.leaves.index');
         Route::post('/leaves-approval/{id}/approve', [AttendanceController::class, 'approveLeave'])->name('admin.leaves.approve');
         Route::post('/leaves-approval/{id}/reject', [AttendanceController::class, 'rejectLeave'])->name('admin.leaves.reject');

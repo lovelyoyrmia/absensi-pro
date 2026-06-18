@@ -8,6 +8,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use DateTime;
 use DateTimeZone;
+use DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -17,7 +18,7 @@ class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
-        $selectedDate = $request->input('date', now()->setTimezone('Asia/Jakarta')->toDateString());
+        $selectedDate = $request->input('date', Carbon::now()->setTimezone('Asia/Jakarta')->toDateString());
 
         $employees = User::where('role', 'employee') 
             ->with(['attendances' => function($query) use ($selectedDate) {
@@ -47,16 +48,22 @@ class AttendanceController extends Controller
     public function processScan(Request $request) {
         $user = auth()->user();
         $now = now()->setTimezone('Asia/Jakarta');
+        $todayDate = $now->toDateString();
+        $currentTime = $now->format('H:i');
+
+        // ==========================================
+        // 1. PROTEKSI STATUS CUTI / SAKIT / IZIN
+        // ==========================================
         $today = Attendance::where('user_id', $user->id)
-                       ->today()
-                       ->first();
+                        ->whereDate($todayDate)
+                        ->first();
+
+        if ($today && in_array($today->status, ['sakit', 'izin', 'cuti'])) {
+            return redirect()->route('dashboard')->with('error', 'Hari ini Anda ditandai sedang ' . strtoupper($today->status) . '. Tidak bisa melakukan absensi.');
+        }
+
         $lat = $_COOKIE['user_lat'] ?? null;
         $lng = $_COOKIE['user_lng'] ?? null;
-
-        $currentTime = $now->format('H:i');
-        $settings = Setting::pluck('value', 'key')->all();
-        $startTime = $settings['work_start_time'] ?? '08:00';
-        $limitTime = $settings['work_limit_time'] ?? '17:00';
 
         $address = "Lokasi tidak ditemukan";
         if ($lat && $lng) {
@@ -72,30 +79,78 @@ class AttendanceController extends Controller
             }
         }
 
+        // ==========================================
+        // 2. PROSES CLOCK IN
+        // ==========================================
         if (!$today) {
-            
-            $exists = Attendance::where('user_id', $user->id)
-                ->today()
-                ->whereNotNull('clock_in')
-                ->exists();
-            if ($exists) return redirect('/dashboard')->with('error', 'Sudah Clock In!');
-            if ($currentTime > $limitTime) {
-                return redirect()->route('dashboard')->with('error', 'Batas waktu absen berakhir jam ' . $limitTime . '.');
+            $shiftName = 'Pagi';
+            $startTime = '08:00';
+
+            if ($user->division === 'CS') {
+                // Ambil jadwal acak mingguan yang di-input Admin dari tabel 'employee_shifts'
+                $schedule = DB::table('employee_shifts')
+                    ->where('user_id', $user->id)
+                    ->whereDate('date', $todayDate)
+                    ->first();
+
+                if ($schedule) {
+                    $shiftName = $schedule->shift_name; // Shift 1, Shift 2, Shift 3
+                    $startTime = $schedule->start_time; // Misal 07:00, 15:00, 23:00
+                } else {
+                    $startTime = '08:00'; 
+                }
             }
+
+            $isLate = $currentTime > $startTime;
+
+            if ($isLate) {
+                session([
+                    'pending_attendance' => [
+                        'shift_name'  => $shiftName,
+                        'clock_in'    => $now->toDateTimeString(),
+                        'address'     => $address,
+                        'startTime'   => $startTime
+                    ]
+                ]);
+                return redirect()->route('attendance.late-form')->with('info', 'Anda terlambat! Sila isi alasan dan lampirkan bukti.');
+            }
+
             Attendance::create([
-                'user_id' => $user->id,
-                'date' => today()->setTimezone('Asia/Jakarta'),
-                'clock_in' => $now,
-                'is_late' => $currentTime > $startTime,
-                'address' => $address,
+                'user_id'         => $user->id,
+                'date'            => $todayDate,
+                'shift_name'      => $shiftName,
+                'clock_in'        => $now,
+                'is_late'         => false,
+                'address'         => $address,
+                'status'          => 'masuk',
+                'approval_status' => 'approved'
             ]);
-            return redirect()->route('dashboard')->with('success', 'Berhasil Clock In!');
+
+            return redirect()->route('dashboard')->with('success', 'Berhasil Clock In tepat waktu!');
         }
+
         if (!$today->clock_out) {
-            $today->update(['clock_out' => $now]);
-            return redirect()->route('dashboard')->with('success', 'Berhasil Clock Out!');
+            $clockInTime = Carbon::parse($today->clock_in);
+            
+            // Hitung total durasi kerja dalam hitungan menit
+            $workDurationMinutes = $clockInTime->diffInMinutes($now);
+            $minimumRequiredMinutes = 8 * 60; // 8 Jam = 480 Menit
+
+            if ($workDurationMinutes < $minimumRequiredMinutes) {
+                $minutesLeft = $minimumRequiredMinutes - $workDurationMinutes;
+                $hoursLeft = floor($minutesLeft / 60);
+                $remMinutes = $minutesLeft % 60;
+
+                return redirect('/dashboard')->with('error', 'Gagal Clock Out! Durasi kerja belum memenuhi syarat wajib 8 jam. Sisa waktu kerja Anda: ' . $hoursLeft . ' jam ' . $remMinutes . ' menit lagi.');
+            }
+
+            $today->update([
+                'clock_out' => $now
+            ]);
+
+            return redirect()->route('dashboard')->with('success', 'Berhasil Clock Out! Terima kasih atas kerja kerasnya hari ini.');
         }
-        
+
         return redirect()->route('dashboard')->with('info', 'Anda sudah menyelesaikan absensi hari ini.');
     }
 
@@ -130,6 +185,37 @@ class AttendanceController extends Controller
         ]);
 
         return redirect()->route('dashboard')->with('success', 'Keterangan ' . ucfirst($request->status) . ' berhasil disimpan!');
+    }
+
+    public function storeLateReason(Request $request) {
+        $request->validate([
+            'late_reason' => 'required|string|max:500',
+            'late_proof'  => 'required|image|mimes:jpg,jpeg,png|max:2048' // Maksimal file 2MB
+        ]);
+
+        $sessionData = session('pending_attendance');
+        if (!$sessionData) {
+            return redirect('/dashboard')->with('error', 'Sesi absensi kedaluwarsa. Silakan scan ulang.');
+        }
+
+        $path = $request->file('late_proof')->store('late_proofs', 'public');
+
+        Attendance::create([
+            'user_id'         => auth()->id(),
+            'date'            => now()->setTimezone('Asia/Jakarta')->toDateString(),
+            'shift_name'      => $sessionData['shift_name'],
+            'clock_in'        => $sessionData['clock_in'],
+            'is_late'         => true,
+            'late_reason'     => $request->late_reason,
+            'late_proof'      => $path,
+            'address'         => $sessionData['address'],
+            'status'          => 'masuk',
+            'approval_status' => 'approved'
+        ]);
+
+        session()->forget('pending_attendance');
+
+        return redirect()->route('dashboard')->with('success', 'Absensi terlambat berhasil disimpan dengan bukti!');
     }
 
     public function adminDashboard()

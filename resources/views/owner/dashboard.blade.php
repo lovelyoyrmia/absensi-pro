@@ -6,31 +6,26 @@
     <p style="color: #64748b;">Statistik operasional perusahaan bulan {{ now()->format('F Y') }}</p>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px;">
-    
-    <div class="card" style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #4f46e5;">
-        <p style="font-size: 14px; color: #64748b; margin: 0;">Total Karyawan</p>
-        <h2 style="font-size: 28px; margin: 10px 0;">{{ $totalEmployees }}</h2>
-        <small style="color: #4f46e5; font-weight: 600;">Aktif dalam sistem</small>
+<div style="background: #1e293b; color: white; padding: 25px; border-radius: 12px; margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+    <div>
+        <p style="color: #94a3b8; margin: 0; font-size: 13px;">Struktur Organisasi</p>
+        <h3 style="margin: 5px 0 0 0; font-size: 22px;">Total Karyawan: {{ $totalEmployees }} Staff</h3>
     </div>
+    <div>
+        <p style="color: #94a3b8; margin: 0; font-size: 13px;">Akumulasi Kedisiplinan</p>
+        <h3 style="margin: 5px 0 0 0; font-size: 16px; color: #f59e0b;">🔴 Total Kasus Telat: {{ $globalLateCount }} Kali</h3>
+    </div>
+    <div>
+        <p style="color: #cbd5e1; margin: 0; font-size: 13px; font-weight: bold; color: #10b981;">💰 Total Hemat Saldo Potongan</p>
+        <h3 style="margin: 5px 0 0 0; font-size: 24px; color: #10b981;">Rp {{ number_format($globalDeductionTotal, 0, ',', '.') }}</h3>
+    </div>
+</div>
 
-    <div class="card" style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #10b981;">
-        <p style="font-size: 14px; color: #64748b; margin: 0;">Total Kehadiran (Bulan Ini)</p>
-        <h2 style="font-size: 28px; margin: 10px 0;">{{ $monthlyPresent }}</h2>
-        <small style="color: #10b981; font-weight: 600;">Record masuk terverifikasi</small>
-    </div>
-
-    <div class="card" style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #ef4444;">
-        <p style="font-size: 14px; color: #64748b; margin: 0;">Total Terlambat</p>
-        <h2 style="font-size: 28px; margin: 10px 0;">{{ $monthlyLate }}</h2>
-        <small style="color: #ef4444; font-weight: 600;">Membutuhkan perhatian</small>
-    </div>
-
-    <div class="card" style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #f59e0b;">
-        <p style="font-size: 14px; color: #64748b; margin: 0;">Jumlah Admin</p>
-        <h2 style="font-size: 28px; margin: 10px 0;">{{ $totalAdmins }}</h2>
-        <small style="color: #f59e0b; font-weight: 600;">Supervisor sistem</small>
-    </div>
+<div style="margin-top: 15px; display: flex; gap: 10px; background: #334155; padding: 15px; border-radius: 8px; color: white; font-size: 13px;">
+    <div><strong>Kehadiran Terdistribusi:</strong></div>
+    <div style="border-right: 1px solid #475569; padding-right: 10px;">📅 Harian: <strong>{{ $presentToday }}</strong></div>
+    <div style="border-right: 1px solid #475569; padding-right: 10px;">📅 Mingguan: <strong>{{ $presentThisWeek }}</strong></div>
+    <div>📅 Bulanan: <strong>{{ $presentThisMonth }}</strong></div>
 </div>
 
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
