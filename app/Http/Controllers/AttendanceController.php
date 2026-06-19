@@ -55,7 +55,7 @@ class AttendanceController extends Controller
         // 1. PROTEKSI STATUS CUTI / SAKIT / IZIN
         // ==========================================
         $today = Attendance::where('user_id', $user->id)
-                        ->whereDate($todayDate)
+                        ->whereDate('date',$todayDate)
                         ->first();
 
         if ($today && in_array($today->status, ['sakit', 'izin', 'cuti'])) {
@@ -216,6 +216,17 @@ class AttendanceController extends Controller
         session()->forget('pending_attendance');
 
         return redirect()->route('dashboard')->with('success', 'Absensi terlambat berhasil disimpan dengan bukti!');
+    }
+
+    public function showLateForm()
+    {
+        $pendingAttendance = session('pending_attendance');
+
+        if (!$pendingAttendance) {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Tidak ada data absensi gantung yang perlu dilengkapi.');
+        }
+
+        return view('attendance.late-form');
     }
 
     public function adminDashboard()

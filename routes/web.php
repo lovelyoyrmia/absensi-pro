@@ -49,6 +49,8 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::post('/attendance/izin', [AttendanceController::class, 'storeIzin'])->name('attendance.store-izin');
+    Route::get('/attendance/late-form', [AttendanceController::class, 'showLateForm'])->name('attendance.late-form');
+    Route::post('/attendance/late-form', [AttendanceController::class, 'storeLateReason'])->name('attendance.store-late');
 
     Route::middleware(['can:access-admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [AttendanceController::class, 'adminDashboard'])->name('admin.dashboard');

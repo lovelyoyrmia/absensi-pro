@@ -210,7 +210,7 @@
         @elseif($today && !$today->clock_out)
             <div class="status-card {{ $today->is_late ? 'late' : 'ontime' }}">
                 <h3>Sedang Bekerja ({{ $today->shift_name ?? 'Pagi' }})</h3>
-                <p>Masuk pada: <strong>{{ \Carbon\Carbon::parse($today->clock_in)->format('H:i') }}</strong></p>
+                <p>Masuk pada: <strong>{{ Carbon::parse($today->clock_in)->format('H:i') }}</strong></p>
                 <span class="badge">{{ $today->is_late ? 'TELAT' : 'TEPAT' }}</span>
                 
                 <hr style="margin: 20px 0; border-top: 1px solid rgba(0,0,0,0.1);">
@@ -323,11 +323,9 @@
                         { fps: 10, qrbox: 250 },
                         (decodedText) => {
                             html5QrCode.stop().then(() => {
-                                // PERBAIKAN: Menulis cookie dengan flag eksplisit SameSite & Path
                                 document.cookie = "user_lat=" + lat + "; max-age=60; path=/; SameSite=Lax";
                                 document.cookie = "user_lng=" + lng + "; max-age=60; path=/; SameSite=Lax";
                                 
-                                // Memberikan delay 300ms agar browser selesai mencatat cookie sebelum pindah halaman
                                 setTimeout(() => {
                                     window.location.href = decodedText;
                                 }, 300);
@@ -338,18 +336,22 @@
                 (error) => {
                     switch(error.code) {
                         case error.PERMISSION_DENIED:
-                            alert("Anda harus mengizinkan akses lokasi untuk melakukan absensi.");
+                            alert("Akses lokasi diblokir browser. Silakan izinkan lokasi di pengaturan browser Anda.");
                             break;
                         case error.POSITION_UNAVAILABLE:
-                            alert("Informasi lokasi tidak tersedia.");
+                            alert("Sinyal GPS lemah atau informasi lokasi tidak tersedia.");
                             break;
                         case error.TIMEOUT:
-                            alert("Waktu permintaan lokasi habis.");
+                            alert("Waktu pencarian lokasi habis (Sinyal GPS tidak stabil).");
                             break;
                     }
                 },
-                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-            );
+                { 
+                    enableHighAccuracy: false, 
+                    timeout: 10000,         
+                    maximumAge: 60000        
+                }
+            );       
         } else {
             alert("Browser Anda tidak mendukung deteksi lokasi.");
         }
