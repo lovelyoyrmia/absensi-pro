@@ -22,20 +22,20 @@
             <a href="{{ route('admin.attendance.index') }}" class="{{ request()->routeIs('admin.attendance.index') ? 'active' : '' }}">
                 📊 Log Kehadiran Hari Ini
             </a>
-            
-            <a href="{{ route('admin.leaves.index') }}" class="{{ request()->routeIs('admin.leaves.*') ? 'active' : '' }}" style="display: flex; justify-content: space-between; align-items: center;">
-                <span>📝 Persetujuan Cuti</span>
-                
-                @php
-                    $pendingCount = \App\Models\Attendance::where('approval_status', 'pending')->count();
-                @endphp
-                @if($pendingCount > 0)
-                    <span style="background: #ef4444; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: bold;">
-                        {{ $pendingCount }}
-                    </span>
-                @endif
-            </a>
-
+            @if(auth()->user()->role !== 'owner')
+                <a href="{{ route('admin.leaves.index') }}" class="{{ request()->routeIs('admin.leaves.*') ? 'active' : '' }}" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📝 Persetujuan Cuti</span>
+                    
+                    @php
+                        $pendingCount = \App\Models\Attendance::where('approval_status', 'pending')->count();
+                    @endphp
+                    @if($pendingCount > 0)
+                        <span style="background: #ef4444; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: bold;">
+                            {{ $pendingCount }}
+                        </span>
+                    @endif
+                </a>
+            @endif
             <a href="{{ route('admin.shifts.index') }}" class="{{ request()->routeIs('admin.shifts.*') ? 'active' : '' }}">
                 📅 Atur Shift Staff CS
             </a>
