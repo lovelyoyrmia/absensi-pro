@@ -180,7 +180,7 @@
 
                     <div id="form-izin-container" class="form-izin">
                         <h4 style="margin-top: 0; color: #1e293b; font-size: 16px; margin-bottom: 15px;">Form Keterangan Tidak Masuk</h4>
-                        <form action="{{ route('attendance.store-izin') }}" method="POST">
+                        <form action="{{ route('attendance.store-izin') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="form-group">
                                 <label for="status">Kategori Halangan</label>
@@ -194,6 +194,12 @@
                                 <label for="notes">Detail Alasan</label>
                                 <textarea name="notes" id="notes" rows="3" class="form-control" placeholder="Tulis alasan singkat ketidakhadiran Anda..." required></textarea>
                             </div>
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="leave_proof" style="display: block; margin-bottom: 5px; font-weight: 600; color: #334155; font-size: 14px;">Lampirkan Bukti Foto / Surat</label>
+                                <input type="file" name="leave_proof" id="leave_proof" class="form-control" accept="image/*" capture="environment" onchange="previewIzin(event)" required>
+                                <img id="izin-preview" alt="Pratinjau Bukti Izin" style="width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-top: 10px; display: none; border: 1px dashed #cbd5e1;">
+                            </div>
                             <button type="submit" class="btn-submit-izin">Kirim Pengajuan</button>
                         </form>
                     </div>
@@ -201,11 +207,30 @@
             </div>
 
         @elseif($today && $today->status !== 'masuk')
-            <div class="status-card completed" style="background: #fef08a; border-left: 5px solid #eab308; color: #713f12;">
-                <h3>Status Hari Ini: <span style="text-transform: uppercase; font-weight: bold;">{{ $today->status }}</span></h3>
-                <p style="margin-top: 10px; color: #854d0e;">Anda tidak perlu mengabsen karena sistem mencatat keterangan: "<i>{{ $today->notes }}</i>"</p>
-                <div style="font-size: 40px; margin-top: 10px;">📅</div>
-            </div>
+            @if($today->approval_status === 'pending')
+                <div class="status-card completed" style="background: #eff6ff; border-left: 5px solid #3b82f6; color: #1e40af;">
+                    <h3>Status Hari Ini: <span style="text-transform: uppercase; font-weight: bold;">{{ $today->status }}</span></h3>
+                    <p style="margin-top: 10px;">⏳ <strong>Menunggu Persetujuan Admin</strong></p>
+                    <p style="color: #2563eb; font-size: 13px;">Alasan diajukan: "<i>{{ $today->notes }}</i>"</p>
+                </div>
+            @elseif($today->approval_status === 'approved')
+                <div class="status-card completed" style="background: #fef08a; border-left: 5px solid #eab308; color: #713f12;">
+                    <h3>Status Hari Ini: <span style="text-transform: uppercase; font-weight: bold;">{{ $today->status }}</span></h3>
+                    <p style="margin-top: 10px; color: #854d0e;">✅ <strong>Disetujui oleh Admin</strong></p>
+                    <p style="font-size: 13px;">Keterangan: "<i>{{ $today->notes }}</i>"</p>
+                </div>
+            @elseif($today->approval_status === 'rejected')
+                <div class="status-card completed" style="background: #fee2e2; border-left: 5px solid #ef4444; color: #991b1b; text-align: left;">
+                    <h3 style="text-align: center;">❌ Pengajuan {{ ucfirst($today->status) }} Ditolak</h3>
+                    <div style="background: white; padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid #fca5a5; font-size: 13px;">
+                        <strong>Alasan Penolakan Admin:</strong><br>
+                        <span style="color:#dc2626; font-style:italic;">"{{ $today->reject_reason ?? 'Tidak ada alasan spesifik.' }}"</span>
+                    </div>
+                    <p style="font-size: 12px; color: #7f1d1d; text-align: center; margin-top: 15px;">
+                        Silakan hubungi HRD langsung jika terjadi kesalahan.
+                    </p>
+                </div>
+            @endif
 
         @elseif($today && !$today->clock_out)
             <div class="status-card {{ $today->is_late ? 'late' : 'ontime' }}">
@@ -289,7 +314,15 @@
 
 <script>
     let html5QrCode;
-
+    function previewIzin(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('izin-preview');
+            output.src = reader.result;
+            output.style.display = 'block';
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
     function toggleFormIzin() {
         const form = document.getElementById('form-izin-container');
         const btnText = document.getElementById('btn-toggle-text');

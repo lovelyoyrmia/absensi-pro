@@ -84,7 +84,12 @@ class AdminReportController extends Controller
             $alpha = $totalWorkDays - ($hadir + $cuti + $izin + $sakit);
             if ($alpha < 0) $alpha = 0;
 
-            $potonganTelat = $telat * 50000;   // Rp 50.000 per telat
+            $potonganTelat = 0;
+            if ($telat >= 3) {
+                // Telat ke-1 dan ke-2 gratis (toleransi), baru dihitung denda dari telat ke-3 dst.
+                $chargeableLate = $telat - 2; 
+                $potonganTelat = $chargeableLate * 50000;
+            }
             $potonganAlpha = $alpha * 100000; // Rp 100.000 per alpha
             $totalPotongan = $potonganTelat + $potonganAlpha;
 

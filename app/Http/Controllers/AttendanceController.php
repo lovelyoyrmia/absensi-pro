@@ -9,9 +9,11 @@ use Carbon\Carbon;
 use DateTime;
 use DateTimeZone;
 use DB;
+use File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 class AttendanceController extends Controller
@@ -159,6 +161,7 @@ class AttendanceController extends Controller
         $request->validate([
             'status' => 'required|in:sakit,izin,cuti',
             'notes' => 'required|string|max:500',
+            'leave_proof'  => 'required|image|mimes:jpg,jpeg,png|max:10048' // Maksimal file 2MB
         ]);
 
         $user = auth()->user();
@@ -172,6 +175,12 @@ class AttendanceController extends Controller
             return redirect()->back()->with('error', 'Anda sudah mengisi absensi atau izin hari ini!');
         }
 
+        if (!$request->hasFile('leave_proof')) {
+            return redirect()->back()->with('error', 'Gagal membaca berkas gambar bukti. Silakan jepret ulang.');
+        }
+
+        $file = $request->file('leave_proof');
+        $path = Storage::disk('public')->put('leave_proofs', $file);
         Attendance::create([
             'user_id' => $user->id,
             'date' => $timezoneDate->toDateString(),
@@ -182,6 +191,7 @@ class AttendanceController extends Controller
             'notes' => $request->notes,
             'address' => 'Pengajuan Non-Kehadiran (' . ucfirst($request->status) . ')',
             'approval_status' => 'pending',
+            'late_proof'      => $path, 
         ]);
 
         return redirect()->route('dashboard')->with('success', 'Keterangan ' . ucfirst($request->status) . ' berhasil disimpan!');
@@ -190,7 +200,7 @@ class AttendanceController extends Controller
     public function storeLateReason(Request $request) {
         $request->validate([
             'late_reason' => 'required|string|max:500',
-            'late_proof'  => 'required|image|mimes:jpg,jpeg,png|max:2048' // Maksimal file 2MB
+            'late_proof'  => 'required|image|mimes:jpg,jpeg,png|max:10048' // Maksimal file 2MB
         ]);
 
         $sessionData = session('pending_attendance');
@@ -198,7 +208,8 @@ class AttendanceController extends Controller
             return redirect('/dashboard')->with('error', 'Sesi absensi kedaluwarsa. Silakan scan ulang.');
         }
 
-        $path = $request->file('late_proof')->store('late_proofs', 'public');
+        $file = $request->file('late_proof');
+        $path = Storage::disk('public')->put('late_proofs', $file);
 
         Attendance::create([
             'user_id'         => auth()->id(),
@@ -216,6 +227,22 @@ class AttendanceController extends Controller
         session()->forget('pending_attendance');
 
         return redirect()->route('dashboard')->with('success', 'Absensi terlambat berhasil disimpan dengan bukti!');
+    }
+
+    public function bukaBerkas($folder, $filename)
+    {
+        $path = $folder . '/' . $filename;
+
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404, 'Berkas foto bukti tidak ditemukan.');
+        }
+    
+        // 3. Ambil biner gambar
+        $file = Storage::disk('public')->get($path);
+        // 4. GUNAKAN SOLUSI BYPASS INI (Menggantikan File::mimeType)
+        // $type = mime_content_type($file);
+        // Kirim langsung ke browser sebagai gambar valid
+        return response($file, 200);
     }
 
     public function showLateForm()
@@ -270,13 +297,14 @@ class AttendanceController extends Controller
     }
 
     // 3. Aksi menolak pengajuan
-    public function rejectLeave($id)
+    public function rejectLeave(Request $request,$id)
     {
         $attendance = Attendance::findOrFail($id);
         
         $attendance->update([
             'approval_status' => 'rejected',
-            'address' => 'Ditolak oleh Admin'
+            'address' => 'Ditolak oleh Admin',
+            'reject_reason' => $request->reject_reason,
         ]);
 
         return redirect()->back()->with('info', 'Pengajuan izin karyawan telah ditolak.');

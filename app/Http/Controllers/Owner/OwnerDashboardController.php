@@ -48,9 +48,24 @@ class OwnerDashboardController extends Controller
             ->where('is_late', true)
             ->count();
 
-        // 4. Kalkulasi Total Hemat Saldo Potongan Komparatif
-        // Aturan: Telat dipotong Rp 50.000, jika Anda punya logika Alpha silakan diakumulasikan di sini
-        $globalDeductionTotal = Attendance::where('is_late', true)->count() * 50000;
+        $startOfMonth = $now->copy()->startOfMonth()->toDateString();
+        $endOfMonth = $now->copy()->endOfMonth()->toDateString();
+
+        $lateAttendancesThisMonth = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->where('is_late', true)
+            ->get()
+            ->groupBy('user_id');
+
+        $globalDeductionTotal = 0;
+
+        foreach ($lateAttendancesThisMonth as $userId => $attendances) {
+            $totalLateCount = $attendances->count();
+            
+            if ($totalLateCount >= 3) {
+                $chargeableLate = $totalLateCount - 2; 
+                $globalDeductionTotal += ($chargeableLate * 50000);
+            }
+        }
 
         // 5. Data Grafik Sederhana (7 Hari Terakhir)
         $chartData = [];

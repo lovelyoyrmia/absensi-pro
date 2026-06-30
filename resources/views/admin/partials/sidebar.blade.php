@@ -35,11 +35,10 @@
                         </span>
                     @endif
                 </a>
+                <a href="{{ route('admin.shifts.index') }}" class="{{ request()->routeIs('admin.shifts.*') ? 'active' : '' }}">
+                    📅 Atur Shift Staff CS
+                </a>
             @endif
-            <a href="{{ route('admin.shifts.index') }}" class="{{ request()->routeIs('admin.shifts.*') ? 'active' : '' }}">
-                📅 Atur Shift Staff CS
-            </a>
-
 
             {{-- 3. MENU DUO LAPORAN BARU (MANAJEMEN REKAP) --}}
             <div style="margin: 20px 0 5px 10px; font-size: 11px; color: #94a3b8; font-weight: bold; letter-spacing: 1px;">LAPORAN REKAP</div>
@@ -55,7 +54,7 @@
 
         @if(auth()->user()->role === 'owner')
             <div style="margin: 20px 0 10px 15px; font-size: 11px; color: #94a3b8; font-weight: bold; letter-spacing: 1px;">SYSTEM CONTROL</div>
-            <a href="{{ route('owner.admins.index') }}">🔑 Kelola Akun Admin</a>
+            {{-- <a href="{{ route('owner.admins.index') }}">🔑 Kelola Akun Admin</a> --}}
             <a href="{{ route('owner.settings.index') }}">⚙️ Pengaturan Jam Kerja</a>
         @else
             <a href="{{ route('admin.employees.index') }}" class="{{ request()->routeIs('admin.employees.index') ? 'active' : '' }}">

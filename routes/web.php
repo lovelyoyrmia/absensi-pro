@@ -23,6 +23,7 @@ Route::middleware('guest')->group(function () {
 });
     
 Route::middleware(['auth'])->group(function () {
+    Route::get('/buka-berkas/{folder}/{filename}', [AttendanceController::class, 'bukaBerkas'])->name('storage.bypass');
     Route::get('/dashboard', function () {
         if (auth()->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');

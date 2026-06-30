@@ -16,7 +16,9 @@ class Attendance extends Model
         'address',
         'status',
         'notes',
-        'approval_status'
+        'approval_status',
+        'reject_reason',
+        'late_proof'
     ];
 
     // 2. Tell Laravel to treat these as Date objects (Carbon)
@@ -30,6 +32,7 @@ class Attendance extends Model
         'status' => 'string',
         'approval_status' => 'string',
         'notes' => 'string',
+        'reject_reason' => 'string',
     ];
 
     /**
